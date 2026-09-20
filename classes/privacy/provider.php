@@ -14,19 +14,26 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+namespace local_puzzel\privacy;
+
 /**
- * Version details.
+ * Privacy provider for local_puzzel.
+ *
+ * The plugin stores no personal data of its own. It reads and writes rows in
+ * mod_lti's own tool tables, which mod_lti is responsible for, and it keeps a
+ * single site-level setting holding the Puzzel.org registration URL.
  *
  * @package    local_puzzel
  * @copyright  2026 Puzzel.org
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-defined('MOODLE_INTERNAL') || die();
-
-$plugin->component = 'local_puzzel';
-$plugin->version   = 2026092000;
-$plugin->requires  = 2022112800; // Moodle 4.1.
-$plugin->supported = [401, 502]; // Verified: the mod_lti API this uses is unchanged across these.
-$plugin->maturity  = MATURITY_ALPHA;
-$plugin->release   = '0.1.0';
+class provider implements \core_privacy\local\metadata\null_provider {
+    /**
+     * Why this plugin stores no personal data.
+     *
+     * @return string the identifier of a string explaining the reason
+     */
+    public static function get_reason(): string {
+        return 'privacy:metadata';
+    }
+}

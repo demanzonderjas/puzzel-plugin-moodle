@@ -35,9 +35,8 @@ require_once($CFG->dirroot . '/mod/lti/locallib.php');
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class tool {
-
     /** @var string Where Puzzel.org answers a dynamic registration. */
-    const DEFAULT_REGISTRATION_URL = 'https://puzzel.org/lti/register';
+    public const DEFAULT_REGISTRATION_URL = 'https://puzzel.org/lti/register';
 
     /**
      * The configured registration URL.
@@ -84,8 +83,10 @@ class tool {
      */
     public static function is_ready(): bool {
         foreach (self::types() as $type) {
-            if ((int) $type->state === LTI_TOOL_STATE_CONFIGURED
-                    && (int) $type->coursevisible === LTI_COURSEVISIBLE_ACTIVITYCHOOSER) {
+            if (
+                (int) $type->state === LTI_TOOL_STATE_CONFIGURED
+                    && (int) $type->coursevisible === LTI_COURSEVISIBLE_ACTIVITYCHOOSER
+            ) {
                 return true;
             }
         }

@@ -62,6 +62,14 @@ if ($start) {
 
     echo $OUTPUT->box_start('generalbox');
     echo html_writer::tag('p', get_string('intro_account', 'local_puzzel'));
+    if (!empty(tool::types())) {
+        // Moodle shows mod_lti's "upgrade or add new" choice when a tool already
+        // matches the registration domain, instead of redirecting.
+        echo $OUTPUT->notification(
+            get_string('upgradenotice', 'local_puzzel'),
+            \core\output\notification::NOTIFY_INFO
+        );
+    }
     echo html_writer::empty_tag('iframe', [
         'src' => $registration->out(false),
         'title' => get_string('connecting', 'local_puzzel'),

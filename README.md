@@ -37,6 +37,24 @@ Connect Puzzel.org* and press the button.
 Placing and playing Puzzel activities is free. Sending scores back to the
 Moodle gradebook requires a Puzzel.org subscription.
 
+## Development
+
+The plugin has no build step. To work on it:
+
+- **Coding style** — `phpcs --standard=moodle-extra local/puzzel`, using
+  [`moodlehq/moodle-cs`](https://github.com/moodlehq/moodle-cs). It is clean
+  with zero warnings, and it should stay that way.
+- **Tests** — `vendor/bin/phpunit --testsuite local_puzzel_testsuite` after
+  `admin/tool/phpunit/cli/init.php`. The tests register a tool type exactly as
+  Moodle's dynamic registration leaves one and assert what `tool::activate()`
+  does to it, including that it does not drop the registered configuration.
+- **CI** — `.github/workflows/ci.yml` runs moodle-plugin-ci against Moodle
+  4.1, 4.5 and 5.2.
+
+A full manual run needs a Moodle that Puzzel.org can reach: Puzzel refuses to
+register a platform that is not on a public https address, so a local Moodle
+needs a tunnel of its own plus `$CFG->wwwroot` and `$CFG->sslproxy`.
+
 ## Licence
 
 GNU GPL v3 or later.
