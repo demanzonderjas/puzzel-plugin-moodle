@@ -24,7 +24,6 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$string['activated'] = 'Puzzel.org is active and now appears in the activity chooser.';
 $string['activatednone'] = 'No Puzzel.org registration was found to activate. If you just cancelled the connection, that is expected.';
 $string['cancel'] = 'Cancel';
 $string['connect'] = 'Connect Puzzel.org';

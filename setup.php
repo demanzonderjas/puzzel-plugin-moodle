@@ -40,11 +40,16 @@ $PAGE->set_title(get_string('setup', 'local_puzzel'));
 if ($activate) {
     require_sesskey();
     $changed = tool::activate();
+    // On success the status notification below already says the tool is active
+    // and in the activity chooser, so a second green box would only repeat it.
+    if ($changed > 0) {
+        redirect($pageurl);
+    }
     redirect(
         $pageurl,
-        get_string($changed > 0 ? 'activated' : 'activatednone', 'local_puzzel'),
+        get_string('activatednone', 'local_puzzel'),
         null,
-        $changed > 0 ? \core\output\notification::NOTIFY_SUCCESS : \core\output\notification::NOTIFY_INFO
+        \core\output\notification::NOTIFY_INFO
     );
 }
 
