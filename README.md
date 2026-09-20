@@ -32,6 +32,19 @@ Notifications* to complete the installation.
 Then go to *Site administration → Plugins → Local plugins → Puzzel.org →
 Connect Puzzel.org* and press the button.
 
+## Using it
+
+Once the site is connected, a teacher adds Puzzel.org like any other activity:
+
+1. In a course, turn on **Edit mode** and choose **Add an activity or
+   resource**.
+2. Pick **Puzzel.org** from the activity chooser.
+3. Sign in to Puzzel.org if asked, then choose one of your activities.
+4. Save. Students open the activity inside Moodle and play it there.
+
+If the activity is graded, the score is written back to the Moodle gradebook
+when a student finishes.
+
 ## Subscription
 
 Placing and playing Puzzel activities is free. Sending scores back to the
