@@ -8,7 +8,8 @@ jobs:
 
     services:
       postgres:
-        image: postgres:14
+        # Moodle 5.2 requires Postgres 16 (moodle-plugin-ci 4.5.10 changelog).
+        image: postgres:16
         env:
           POSTGRES_USER: 'postgres'
           POSTGRES_HOST_AUTH_METHOD: 'trust'
