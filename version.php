@@ -28,5 +28,5 @@ $plugin->component = 'local_puzzel';
 $plugin->version   = 2026092000;
 $plugin->requires  = 2022112800; // Moodle 4.1.
 $plugin->supported = [401, 502]; // Verified: the mod_lti API this uses is unchanged across these.
-$plugin->maturity  = MATURITY_ALPHA;
+$plugin->maturity  = MATURITY_BETA;
 $plugin->release   = '0.1.0';
