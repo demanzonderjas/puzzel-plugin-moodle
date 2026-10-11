@@ -17,6 +17,11 @@ chooser* — and until they do, teachers see nothing.
 This plugin runs the registration and then does exactly that, so the admin's
 whole job is one button.
 
+It only ever activates a **pending** tool: the one a connection has just
+created, or one an administrator picks from the list on the page. A Puzzel.org
+tool that is already active, was rejected, or was deliberately kept out of the
+activity chooser is never changed — that stays under *Manage tools*.
+
 ## Requirements
 
 - Moodle 4.1 or later.
@@ -70,4 +75,4 @@ needs a tunnel of its own plus `$CFG->wwwroot` and `$CFG->sslproxy`.
 
 ## Licence
 
-GNU GPL v3 or later.
+GNU GPL v3 or later. The full text is in [`LICENSE`](LICENSE).

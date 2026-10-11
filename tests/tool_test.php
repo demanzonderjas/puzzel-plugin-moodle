@@ -1,18 +1,18 @@
 <?php
-// This file is part of the Puzzel.org plugin for Moodle - https://puzzel.org
+// This file is part of Moodle - https://moodle.org/
 //
-// This program is free software: you can redistribute it and/or modify
+// Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// This program is distributed in the hope that it will be useful,
+// Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace local_puzzel;
 
@@ -43,11 +43,12 @@ final class tool_test extends \advanced_testcase {
      * registration_to_config() hardcodes coursevisible to preconfigured.
      *
      * @param string $domain the tool domain to register under
+     * @param int $state the state to leave the type in, pending as Moodle does by default
      * @return int the new type id
      */
-    private function register_as_moodle_does(string $domain): int {
+    private function register_as_moodle_does(string $domain, int $state = LTI_TOOL_STATE_PENDING): int {
         $type = new \stdClass();
-        $type->state = LTI_TOOL_STATE_PENDING;
+        $type->state = $state;
         $type->ltiversion = LTI_VERSION_1P3;
 
         $config = new \stdClass();
@@ -82,7 +83,7 @@ final class tool_test extends \advanced_testcase {
         $this->assertEquals(LTI_COURSEVISIBLE_PRECONFIGURED, $before->coursevisible);
         $this->assertFalse(tool::is_ready());
 
-        $this->assertEquals(1, tool::activate());
+        $this->assertTrue(tool::activate($id));
 
         $after = $DB->get_record('lti_types', ['id' => $id], '*', MUST_EXIST);
         $this->assertEquals(LTI_TOOL_STATE_CONFIGURED, $after->state);
@@ -102,7 +103,7 @@ final class tool_test extends \advanced_testcase {
         set_config('registrationurl', 'https://puzzel.test/lti/register', 'local_puzzel');
         $id = $this->register_as_moodle_does('puzzel.test');
 
-        tool::activate();
+        tool::activate($id);
 
         $config = lti_get_type_config($id);
         $this->assertEquals(1, $config['contentitem']);
@@ -120,10 +121,82 @@ final class tool_test extends \advanced_testcase {
         set_config('registrationurl', 'https://puzzel.test/lti/register', 'local_puzzel');
         $otherid = $this->register_as_moodle_does('someone-else.test');
 
-        $this->assertEquals(0, tool::activate());
+        $this->assertFalse(tool::activate($otherid));
+        $this->assertNull(tool::created_after(0));
 
         $other = $DB->get_record('lti_types', ['id' => $otherid], '*', MUST_EXIST);
         $this->assertEquals(LTI_TOOL_STATE_PENDING, $other->state);
+    }
+
+    /**
+     * Activating one registration leaves every other Puzzel.org tool as it was.
+     */
+    public function test_activate_changes_only_the_type_it_is_given(): void {
+        global $DB;
+        $this->resetAfterTest();
+
+        set_config('registrationurl', 'https://puzzel.test/lti/register', 'local_puzzel');
+        $olderid = $this->register_as_moodle_does('puzzel.test');
+        $newerid = $this->register_as_moodle_does('puzzel.test');
+
+        $this->assertTrue(tool::activate($newerid));
+
+        $older = $DB->get_record('lti_types', ['id' => $olderid], '*', MUST_EXIST);
+        $this->assertEquals(LTI_TOOL_STATE_PENDING, $older->state);
+        $this->assertEquals(LTI_COURSEVISIBLE_PRECONFIGURED, $older->coursevisible);
+    }
+
+    /**
+     * A tool an administrator rejected stays rejected.
+     */
+    public function test_activate_leaves_a_rejected_tool_rejected(): void {
+        global $DB;
+        $this->resetAfterTest();
+
+        set_config('registrationurl', 'https://puzzel.test/lti/register', 'local_puzzel');
+        $id = $this->register_as_moodle_does('puzzel.test', LTI_TOOL_STATE_REJECTED);
+
+        $this->assertFalse(tool::activate($id));
+
+        $after = $DB->get_record('lti_types', ['id' => $id], '*', MUST_EXIST);
+        $this->assertEquals(LTI_TOOL_STATE_REJECTED, $after->state);
+        $this->assertEquals(LTI_COURSEVISIBLE_PRECONFIGURED, $after->coursevisible);
+    }
+
+    /**
+     * A configured tool kept out of the activity chooser is not moved into it.
+     */
+    public function test_activate_leaves_a_configured_tool_where_it_is(): void {
+        global $DB;
+        $this->resetAfterTest();
+
+        set_config('registrationurl', 'https://puzzel.test/lti/register', 'local_puzzel');
+        $id = $this->register_as_moodle_does('puzzel.test', LTI_TOOL_STATE_CONFIGURED);
+
+        $this->assertFalse(tool::activate($id));
+
+        $after = $DB->get_record('lti_types', ['id' => $id], '*', MUST_EXIST);
+        $this->assertEquals(LTI_TOOL_STATE_CONFIGURED, $after->state);
+        $this->assertEquals(LTI_COURSEVISIBLE_PRECONFIGURED, $after->coursevisible);
+        $this->assertFalse(tool::is_ready());
+    }
+
+    /**
+     * Only a type created after the registration started counts as its result.
+     */
+    public function test_created_after_finds_only_the_new_registration(): void {
+        $this->resetAfterTest();
+
+        set_config('registrationurl', 'https://puzzel.test/lti/register', 'local_puzzel');
+        $this->register_as_moodle_does('puzzel.test');
+        $this->register_as_moodle_does('puzzel.test', LTI_TOOL_STATE_REJECTED);
+
+        // Nothing was registered since: the older pending tool is not picked up.
+        $baseline = tool::newest_type_id();
+        $this->assertNull(tool::created_after($baseline));
+
+        $newid = $this->register_as_moodle_does('puzzel.test');
+        $this->assertEquals($newid, tool::created_after($baseline)->id);
     }
 
     /**
@@ -133,9 +206,9 @@ final class tool_test extends \advanced_testcase {
         $this->resetAfterTest();
 
         set_config('registrationurl', 'https://puzzel.test/lti/register', 'local_puzzel');
-        $this->register_as_moodle_does('puzzel.test');
+        $id = $this->register_as_moodle_does('puzzel.test');
 
-        $this->assertEquals(1, tool::activate());
-        $this->assertEquals(0, tool::activate());
+        $this->assertTrue(tool::activate($id));
+        $this->assertFalse(tool::activate($id));
     }
 }

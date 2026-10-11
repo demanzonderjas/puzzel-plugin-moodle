@@ -1,18 +1,18 @@
 <?php
-// This file is part of the Puzzel.org plugin for Moodle - https://puzzel.org
+// This file is part of Moodle - https://moodle.org/
 //
-// This program is free software: you can redistribute it and/or modify
+// Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// This program is distributed in the hope that it will be useful,
+// Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace local_puzzel;
 
@@ -73,7 +73,47 @@ class tool {
         return $DB->get_records('lti_types', [
             'tooldomain' => $domain,
             'ltiversion' => LTI_VERSION_1P3,
-        ], 'timecreated DESC');
+        ], 'timecreated DESC, id DESC');
+    }
+
+    /**
+     * The Puzzel.org tool types still waiting for an administrator.
+     *
+     * @return array of stdClass, newest first
+     */
+    public static function pending(): array {
+        return array_filter(self::types(), function ($type) {
+            return (int) $type->state === LTI_TOOL_STATE_PENDING;
+        });
+    }
+
+    /**
+     * The highest tool type id on the site, taken before a registration starts.
+     *
+     * Whatever dynamic registration adds afterwards has a higher id, which is
+     * how created_after() tells the new tool from the ones already here.
+     *
+     * @return int 0 when the site has no tool types yet
+     */
+    public static function newest_type_id(): int {
+        global $DB;
+
+        return (int) $DB->get_field_sql('SELECT MAX(id) FROM {lti_types}');
+    }
+
+    /**
+     * The pending Puzzel.org tool type a registration has just created.
+     *
+     * @param int $afterid the value of newest_type_id() before the registration
+     * @return \stdClass|null the newest such type, or null when there is none
+     */
+    public static function created_after(int $afterid): ?\stdClass {
+        foreach (self::pending() as $type) {
+            if ((int) $type->id > $afterid) {
+                return $type;
+            }
+        }
+        return null;
     }
 
     /**
@@ -94,36 +134,35 @@ class tool {
     }
 
     /**
-     * Activate every Puzzel.org tool type and show it in the activity chooser.
+     * Activate one pending Puzzel.org tool type and show it in the activity chooser.
+     *
+     * Only a pending type is ever changed. A type an administrator has already
+     * configured or rejected carries a decision somebody made - including the
+     * choice to keep it out of the activity chooser - and is left as it is.
      *
      * The config is round-tripped through lti_get_type_type_config() and only
      * coursevisible is overridden: lti_update_type() rewrites the type's
      * config rows and its course categories from what it is handed, so a
      * sparse config would quietly drop settings the registration made.
      *
-     * @return int the number of types changed
+     * @param int $typeid the id of the tool type to activate
+     * @return bool whether the type was activated
      */
-    public static function activate(): int {
-        $changed = 0;
-
-        foreach (self::types() as $record) {
-            $isactive = (int) $record->state === LTI_TOOL_STATE_CONFIGURED;
-            $inchooser = (int) $record->coursevisible === LTI_COURSEVISIBLE_ACTIVITYCHOOSER;
-            if ($isactive && $inchooser) {
-                continue;
-            }
-
-            $config = lti_get_type_type_config($record->id);
-            $config->lti_coursevisible = LTI_COURSEVISIBLE_ACTIVITYCHOOSER;
-
-            $type = new \stdClass();
-            $type->id = $record->id;
-            $type->state = LTI_TOOL_STATE_CONFIGURED;
-
-            lti_update_type($type, $config);
-            $changed++;
+    public static function activate(int $typeid): bool {
+        $pending = self::pending();
+        if (!isset($pending[$typeid])) {
+            return false;
         }
 
-        return $changed;
+        $config = lti_get_type_type_config($typeid);
+        $config->lti_coursevisible = LTI_COURSEVISIBLE_ACTIVITYCHOOSER;
+
+        $type = new \stdClass();
+        $type->id = $typeid;
+        $type->state = LTI_TOOL_STATE_CONFIGURED;
+
+        lti_update_type($type, $config);
+
+        return true;
     }
 }
